@@ -71,16 +71,135 @@ public class ZontBrandParser : ParserBase
     private async Task ParseProductDetails(Product product)
     {
         var doc = await GetDocument(product.Uri);
+        var root = doc.DocumentNode;
 
-        string productPageSku = doc.DocumentNode.SelectSingleNode("//div[@class='product__info']//div[contains(text(), 'Артикул: ')]")?
-            .InnerText
+        // Verify SKU
+        string productPageSku = GetNodeText(
+            root.SelectSingleNode("//div[contains(@class, 'product__info')]//div[contains(text(), 'Артикул: ')]"))
             .Replace("Артикул: ", "")
-            .TrimHtml();
-
+            .Trim();
 
         if (productPageSku != product.Sku)
         {
             throw new Exception($"Несовпадение sku товара: {productPageSku} != {product.Sku}");
+        }
+
+        // Product name
+        product.Name = GetNodeText(
+            root.SelectSingleNode("//div[contains(@class, 'product__title')]//h1"));
+
+        // Product images: use links to original images, not thumbnail previews.
+        var imageNodes = root.SelectNodes(
+            "//div[contains(@class, 'product__image-big')]//a[contains(@class, 'fancybox')]");
+
+        if (imageNodes != null)
+        {
+            foreach (var node in imageNodes)
+            {
+                var imageUrl = ResolveUrl(
+                    product.Uri,
+                    node.GetAttributeValue("href", null));
+
+                if (!string.IsNullOrWhiteSpace(imageUrl) &&
+                    !product.Images.Contains(imageUrl, StringComparer.OrdinalIgnoreCase))
+                {
+                    product.Images.Add(imageUrl);
+                }
+            }
+        }
+
+        // Combine short and full product descriptions while preserving their HTML.
+        var shortDescriptionNode = root.SelectSingleNode(
+            "//div[contains(@class, 'product__content')]//div[contains(@class, 'product__text')]");
+
+        var fullDescriptionNode = root.SelectSingleNode("//div[@id='description']");
+
+        var descriptions = new[]
+        {
+            shortDescriptionNode?.InnerHtml.Trim(),
+            fullDescriptionNode?.InnerHtml.Trim()
+        }
+        .Where(markup => !string.IsNullOrWhiteSpace(markup));
+
+        product.DescriptionMarkup = string.Join(
+            Environment.NewLine,
+            descriptions);
+
+        // Technical characteristics
+        const string characteristicsGroup = "Технические характеристики";
+        var characteristicRows = root.SelectNodes(
+            "//div[@id='specifications']//table//tr");
+
+        if (characteristicRows != null)
+        {
+            foreach (var row in characteristicRows)
+            {
+                var cells = row.SelectNodes("./td");
+                if (cells == null || cells.Count < 2)
+                    continue;
+
+                var name = GetNodeText(cells[0]);
+                var value = GetNodeText(cells[1]);
+
+                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(value))
+                    continue;
+
+                product.Characteristics.Add(new Characteristic
+                {
+                    Group = characteristicsGroup,
+                    Name = name,
+                    Value = value
+                });
+
+                if (name.Contains("габарит", StringComparison.OrdinalIgnoreCase))
+                {
+                    var dimensions = ParseNumbers(value);
+                    if (dimensions.Count == 3)
+                        product.Dimensions = dimensions.ToArray();
+                }
+
+                if (name.Contains("масса", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("вес", StringComparison.OrdinalIgnoreCase))
+                {
+                    var weight = ParseNumbers(value);
+                    if (weight.Count > 0)
+                    {
+                        product.Weight = value.Contains("гр", StringComparison.OrdinalIgnoreCase)
+                            ? weight[0] / 1000m
+                            : weight[0];
+                    }
+                }
+            }
+        }
+
+        // Remove presentation-only attributes from the final description markup.
+        product.DescriptionMarkup = SanitizeDescriptionMarkup(product.DescriptionMarkup);
+
+        // PDF documents listed in the product documentation tab.
+        var pdfNodes = root.SelectNodes(
+            "//div[@id='documentation']//a[contains(translate(@href, 'PDF', 'pdf'), '.pdf')]");
+
+        if (pdfNodes != null)
+        {
+            var addedUrls = new HashSet<string>(
+                product.Instructions.Select(instruction => instruction.Uri),
+                StringComparer.OrdinalIgnoreCase);
+
+            foreach (var node in pdfNodes)
+            {
+                var pdfUrl = ResolveUrl(
+                    product.Uri,
+                    node.GetAttributeValue("href", null));
+
+                if (string.IsNullOrWhiteSpace(pdfUrl) || !addedUrls.Add(pdfUrl))
+                    continue;
+
+                product.Instructions.Add(new PdfInstruction
+                {
+                    Name = GetNodeText(node),
+                    Uri = pdfUrl
+                });
+            }
         }
     }
 }
