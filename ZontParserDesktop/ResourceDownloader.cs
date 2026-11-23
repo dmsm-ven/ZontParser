@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
 using ZontParserDesktop.Helpers;
 
 namespace ZontParserDesktop;
@@ -44,7 +43,7 @@ public class ResourceDownloader
     {
         var images = product.Images.Distinct().ToArray();
 
-        foreach (var image in images)
+        /*foreach (var image in images)
         {
             string localPath = Path.Combine(folder, product.ManufacturerFtpPath, "products", image.CreateMD5() + Path.GetExtension(image).ToLower());
 
@@ -56,22 +55,11 @@ public class ResourceDownloader
                     Directory.CreateDirectory(dir);
                 }
 
-                try
-                {
-                    using (var fs = new FileStream(localPath, FileMode.Create))
-                    {
-                        var data = await httpClient.GetStreamAsync(image);
-                        await data.CopyToAsync(fs);
-                        await Task.Delay(TimeSpan.FromSeconds(1));
-                    }
-
-                }
-                catch
-                {
-                    throw;
-                }
+                var data = await httpClient.GetByteArrayAsync(pdf.Uri);
+                await File.WriteAllBytesAsync(localPath, image);
+                await Task.Delay(TimeSpan.FromSeconds(1));
             }
-        }
+        }*/
 
         // Description images are always stored as JPEG, regardless of the supplier format.
         foreach (var imageUrl in product.DescriptionImages.Distinct())
@@ -80,7 +68,7 @@ public class ResourceDownloader
                 folder,
                 product.ManufacturerFtpPath,
                 "description_images",
-                imageUrl.CreateMD5() + ".jpg");
+                imageUrl.CreateMD5() + Path.GetExtension(imageUrl));
 
             if (File.Exists(localPath))
                 continue;
@@ -90,19 +78,8 @@ public class ResourceDownloader
                 Directory.CreateDirectory(dir);
 
             var imageBytes = await httpClient.GetByteArrayAsync(imageUrl);
-            using var inputStream = new MemoryStream(imageBytes);
-            var bitmap = new BitmapImage();
-            bitmap.BeginInit();
-            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.StreamSource = inputStream;
-            bitmap.EndInit();
-            bitmap.Freeze();
-
-            var encoder = new JpegBitmapEncoder { QualityLevel = 90 };
-            encoder.Frames.Add(BitmapFrame.Create(bitmap));
-
-            using var outputStream = new FileStream(localPath, FileMode.Create, FileAccess.Write);
-            encoder.Save(outputStream);
+            await File.WriteAllBytesAsync(localPath, imageBytes);
+            await Task.Delay(TimeSpan.FromSeconds(1));
         }
 
         var instructions = product.Instructions;
@@ -118,18 +95,10 @@ public class ResourceDownloader
                 {
                     Directory.CreateDirectory(dir);
                 }
-                try
-                {
-                    using (var fs = new FileStream(localPath, FileMode.Create))
-                    {
-                        var data = await httpClient.GetStreamAsync(pdf.Uri);
-                        await data.CopyToAsync(fs);
-                    }
-                }
-                catch
-                {
-                    throw;
-                }
+
+                var data = await httpClient.GetByteArrayAsync(pdf.Uri);
+                await File.WriteAllBytesAsync(localPath, data);
+                await Task.Delay(TimeSpan.FromSeconds(1));
             }
         }
     }
