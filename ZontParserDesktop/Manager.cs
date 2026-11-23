@@ -17,7 +17,7 @@ public class Manager
         {
             if (string.IsNullOrWhiteSpace(CurrentBrandKey))
             {
-                throw new ArgumentNullException(nameof(CurrentBrandKey));
+                return "";
             }
             return $"{CurrentBrandKey}_products.json"; ;
         }
