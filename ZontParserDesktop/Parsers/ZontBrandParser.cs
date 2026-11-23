@@ -252,8 +252,12 @@ public class ZontBrandParser : ParserBase
         }
 
         // Product descriptions must not contain links to the supplier website.
-        foreach (var node in description.DocumentNode.SelectNodes("//*[@href]") ?? Enumerable.Empty<HtmlNode>())
-            node.Attributes.Remove("href");
+        var linkedNodes = description.DocumentNode.SelectNodes("//*[@href]");
+        if (linkedNodes != null)
+        {
+            foreach (var node in linkedNodes)
+                node.Attributes.Remove("href");
+        }
 
         product.DescriptionMarkup = description.DocumentNode.InnerHtml.Trim();
     }
