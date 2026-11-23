@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using HtmlAgilityPack;
 
 namespace ZontParserDesktop.Parsers;
 
@@ -189,6 +190,7 @@ public class ZontBrandParser : ParserBase
 
         // Remove presentation-only attributes from the final description markup.
         product.DescriptionMarkup = SanitizeDescriptionMarkup(product.DescriptionMarkup);
+        PrepareDescriptionImages(product);
 
         // PDF documents listed in the product documentation tab.
         var pdfNodes = root.SelectNodes(
@@ -216,5 +218,43 @@ public class ZontBrandParser : ParserBase
                 });
             }
         }
+    }
+
+    private static void PrepareDescriptionImages(Product product)
+    {
+        if (string.IsNullOrWhiteSpace(product.DescriptionMarkup))
+            return;
+
+        var description = new HtmlDocument();
+        description.LoadHtml(product.DescriptionMarkup);
+
+        var imageNodes = description.DocumentNode.SelectNodes("//img");
+        if (imageNodes != null)
+        {
+            foreach (var imageNode in imageNodes)
+            {
+                var imageSource = imageNode.GetAttributeValue("src", null);
+
+                if (string.IsNullOrWhiteSpace(imageSource))
+                    imageSource = imageNode.GetAttributeValue("data-src", null);
+
+                var imageUrl = ResolveUrl(product.Uri, imageSource);
+                if (string.IsNullOrWhiteSpace(imageUrl))
+                    continue;
+
+                if (!product.DescriptionImages.Contains(imageUrl, StringComparer.OrdinalIgnoreCase))
+                    product.DescriptionImages.Add(imageUrl);
+
+                // Keep the original URL in markup; Formatter replaces it with the local website path.
+                imageNode.SetAttributeValue("src", imageUrl);
+                imageNode.Attributes.Remove("data-src");
+            }
+        }
+
+        // Product descriptions must not contain links to the supplier website.
+        foreach (var node in description.DocumentNode.SelectNodes("//*[@href]") ?? Enumerable.Empty<HtmlNode>())
+            node.Attributes.Remove("href");
+
+        product.DescriptionMarkup = description.DocumentNode.InnerHtml.Trim();
     }
 }
