@@ -196,8 +196,12 @@ public class Formatter
         }
 
         // Remove every link destination so exported descriptions cannot link to supplier pages.
-        foreach (var node in doc.DocumentNode.SelectNodes("//*[@href]") ?? Enumerable.Empty<HtmlNode>())
-            node.Attributes.Remove("href");
+        var linkedNodes = doc.DocumentNode.SelectNodes("//*[@href]");
+        if (linkedNodes != null)
+        {
+            foreach (var node in linkedNodes)
+                node.Attributes.Remove("href");
+        }
 
         // Rewrite embedded supplier images to their local OpenCart image paths.
         var descriptionImageNodes = doc.DocumentNode.SelectNodes("//img");
