@@ -150,7 +150,7 @@ public class MyHeatParser : ParserBase
                         .Select(GetNodeText)
                         .Where(value => !string.IsNullOrWhiteSpace(value));
 
-                    var value = string.Join("\\n", values);
+                    var value = string.Join("\n", values);
                     if (string.IsNullOrWhiteSpace(value))
                         continue;
 
