@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using ZontParserDesktop.Helpers;
 
 namespace ZontParserDesktop.Parsers;
 
@@ -47,12 +46,28 @@ public class ZontBrandParser : ParserBase
 
     private async Task<string> SerachProductUriBySku(string sku)
     {
+        var directSkuToUriMap = new Dictionary<string, string>()
+        {
+            ["ML12218"] = "https://zont.online/product/akkumulyator-rezervnyj-li-ion-1ah/",
+            ["ML8569"] = "https://zont.online/product/datchik-temperatury-komnatnyj-ds18s20/",
+            ["ML00003614"] = "https://zont.online/product/termodatchik-teplonositelya-ulichnyj-zont-ds18b20/",
+            ["ML13866-tvp"] = "https://zont.online/product/radiotermodatchik-ulichnyj-zont-ml-711/",
+            ["ML00000291"] = "https://zont.online/product/rele-promezhutochnoe-na-din-rejku-v-sbore/",
+            ["ML12294"] = "https://zont.online/product/termodatchik-ulichnyj-teplonositelya-zont-700/",
+
+        };
+        if (directSkuToUriMap.ContainsKey(sku))
+        {
+            return directSkuToUriMap[sku];
+        }
+
         //example: https://zont.online/?s=ML00007554
         var doc = await GetDocument($"https://zont.online/?s={sku}");
         if (doc.DocumentNode.SelectSingleNode("//a[contains(@class, 'card ')]") != null)
         {
             var results = doc.DocumentNode.SelectNodes("//a[contains(@class, 'card ')]")
                 .Select(a => a.GetAttributeValue("href", null))
+                .Where(href => href.StartsWith("https://zont.online/product/"))
                 .ToArray();
 
             if (results.Length == 1)
@@ -65,7 +80,7 @@ public class ZontBrandParser : ParserBase
         {
             Debug.WriteLine($"Товар с SKU: {sku} не найден");
         }
-        return "";
+        throw new ArgumentOutOfRangeException();
     }
 
     private async Task ParseProductDetails(Product product)
@@ -81,7 +96,7 @@ public class ZontBrandParser : ParserBase
 
         if (productPageSku != product.Sku)
         {
-            throw new Exception($"Несовпадение sku товара: {productPageSku} != {product.Sku}");
+            Debug.WriteLine($"Несовпадение sku товара: {productPageSku} != {product.Sku}");
         }
 
         // Product name
@@ -90,7 +105,7 @@ public class ZontBrandParser : ParserBase
 
         // Product images: use links to original images, not thumbnail previews.
         var imageNodes = root.SelectNodes(
-            "//div[contains(@class, 'product__image-big')]//a[contains(@class, 'fancybox')]");
+            "//div[contains(@class, 'product__image-big')]//a[@rel='gallery']");
 
         if (imageNodes != null)
         {

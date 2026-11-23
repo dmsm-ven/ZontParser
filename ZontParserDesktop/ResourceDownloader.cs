@@ -10,7 +10,13 @@ namespace ZontParserDesktop;
 
 public class ResourceDownloader
 {
-    private HttpClient httpClient = new();
+    private HttpClient httpClient = new(new HttpClientHandler()
+    {
+        AllowAutoRedirect = true,
+        CookieContainer = new System.Net.CookieContainer(),
+        UseCookies = true,
+        AutomaticDecompression = System.Net.DecompressionMethods.All
+    });
     public async Task DownloadResource(IEnumerable<Product> products, string folder, IProgress<double> indicator)
     {
         int total = products.Count();
@@ -55,6 +61,7 @@ public class ResourceDownloader
                     {
                         var data = await httpClient.GetStreamAsync(image);
                         await data.CopyToAsync(fs);
+                        await Task.Delay(TimeSpan.FromSeconds(1));
                     }
 
                 }
@@ -92,6 +99,5 @@ public class ResourceDownloader
                 }
             }
         }
-
     }
 }
