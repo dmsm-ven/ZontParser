@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using HtmlAgilityPack;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -102,108 +103,91 @@ public class MyHeatParser : ParserBase
         if (descriptionNode != null)
             product.DescriptionMarkup = descriptionNode.InnerHtml.Trim();
 
-        // Characteristics and functional features
-        var characteristicsHeading = root.SelectSingleNode(
-            "//h2[normalize-space()='Характеристики']");
+        // Functional features
+        // Resolve the tab by its ID directly. It is not guaranteed to remain inside
+        // the same wrapper as the "Характеристики" heading.
+        var featuresListNode = root.SelectSingleNode("//div[@id='pills-home']/ul");
 
-        // The supplier page uses a .container div for the characteristics tabs.
-        // Fall back to the heading's parent in case the wrapper class changes.
-        var characteristicsSection = characteristicsHeading?.SelectSingleNode(
-            "ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' container ')][1]")
-            ?? characteristicsHeading?.ParentNode;
-
-        if (characteristicsSection != null)
+        if (featuresListNode != null)
         {
-            // Functional features are stored as markup at the end of the product description.
-            var featuresListNode = characteristicsSection.SelectSingleNode(
-                ".//div[@id='pills-home']/ul");
+            var featuresMarkup = featuresListNode.OuterHtml.Trim();
 
-            if (featuresListNode != null)
+            product.DescriptionMarkup = string.IsNullOrWhiteSpace(product.DescriptionMarkup)
+                ? featuresMarkup
+                : product.DescriptionMarkup + Environment.NewLine + featuresMarkup;
+        }
+
+        // Technical characteristics are parsed separately from the #pills-profile tab.
+        var technicalTab = root.SelectSingleNode("//div[@id='pills-profile']");
+
+        if (technicalTab != null)
+        {
+            var groupName = GetNodeText(
+                root.SelectSingleNode(
+                    "//ul[contains(@class, 'nav-pills')]//button[@data-bs-target='#pills-profile']"));
+
+            var characteristicNodes = technicalTab.SelectNodes(
+                ".//li[contains(@class, 'list-group-item')]");
+
+            if (characteristicNodes != null)
             {
-                var featuresMarkup = featuresListNode.OuterHtml.Trim();
-
-                product.DescriptionMarkup = string.IsNullOrWhiteSpace(product.DescriptionMarkup)
-                    ? featuresMarkup
-                    : product.DescriptionMarkup + Environment.NewLine + featuresMarkup;
-            }
-
-            // Technical characteristics are parsed separately from the #pills-profile tab.
-            var technicalTab = characteristicsSection.SelectSingleNode(
-                ".//div[@id='pills-profile']");
-
-            if (technicalTab != null)
-            {
-                var groupName = GetNodeText(
-                    characteristicsSection.SelectSingleNode(
-                        ".//ul[contains(@class, 'nav-pills')]//button[@data-bs-target='#pills-profile']"));
-
-                if (string.IsNullOrWhiteSpace(groupName))
+                foreach (var node in characteristicNodes)
                 {
-                    groupName = GetNodeText(
-                        characteristicsSection.SelectSingleNode(
-                            ".//ul[contains(@class, 'nav-pills')]//button"));
-                }
+                    var name = GetNodeText(
+                        node.SelectSingleNode(
+                            ".//p[contains(@class, 'text-caption')]"));
 
-                var characteristicNodes = technicalTab.SelectNodes(
-                    ".//li[contains(@class, 'list-group-item')]");
+                    if (string.IsNullOrWhiteSpace(name))
+                        continue;
 
-                if (characteristicNodes != null)
-                {
-                    foreach (var node in characteristicNodes)
+                    var valueNodes = node.SelectNodes(
+                        ".//div[contains(@class, 'me-auto')]/p[not(contains(@class, 'text-caption'))]");
+
+                    if (valueNodes == null)
+                        continue;
+
+                    var values = valueNodes
+                        .Select(GetNodeText)
+                        .Where(value => !string.IsNullOrWhiteSpace(value));
+
+                    var value = string.Join("\\n", values);
+                    if (string.IsNullOrWhiteSpace(value))
+                        continue;
+
+                    product.Characteristics.Add(new Characteristic
                     {
-                        var name = GetNodeText(
-                            node.SelectSingleNode(
-                                ".//p[contains(@class, 'text-caption')]"));
+                        Group = groupName,
+                        Name = name,
+                        Value = value
+                    });
 
-                        if (string.IsNullOrWhiteSpace(name))
-                            continue;
+                    // Product.Dimensions accepts exactly three values.
+                    // Keep 2D dimensions in Characteristics instead of inventing a third value.
+                    if (name.Contains("габарит", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var dimensions = ParseNumbers(value);
+                        if (dimensions.Count == 3)
+                            product.Dimensions = dimensions.ToArray();
+                    }
 
-                        var valueNodes = node.SelectNodes(
-                            ".//div[contains(@class, 'me-auto')]/p[not(contains(@class, 'text-caption'))]");
-
-                        if (valueNodes == null)
-                            continue;
-
-                        var values = valueNodes
-                            .Select(GetNodeText)
-                            .Where(value => !string.IsNullOrWhiteSpace(value));
-
-                        var value = string.Join("\n", values);
-                        if (string.IsNullOrWhiteSpace(value))
-                            continue;
-
-                        product.Characteristics.Add(new Characteristic
+                    // Weight is stored in kilograms.
+                    if (name.Contains("масса", StringComparison.OrdinalIgnoreCase) ||
+                        name.Contains("вес", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var numbers = ParseNumbers(value);
+                        if (numbers.Count > 0)
                         {
-                            Group = groupName,
-                            Name = name,
-                            Value = value
-                        });
-
-                        // Product.Dimensions accepts exactly three values.
-                        // Keep 2D dimensions in Characteristics instead of inventing a third value.
-                        if (name.Contains("габарит", StringComparison.OrdinalIgnoreCase))
-                        {
-                            var dimensions = ParseNumbers(value);
-                            if (dimensions.Count == 3)
-                                product.Dimensions = dimensions.ToArray();
-                        }
-
-                        // Weight is stored in kilograms.
-                        if (name.Contains("масса", StringComparison.OrdinalIgnoreCase) ||
-                            name.Contains("вес", StringComparison.OrdinalIgnoreCase))
-                        {
-                            var numbers = ParseNumbers(value);
-                            if (numbers.Count > 0)
-                            {
-                                product.Weight = value.Contains("гр", StringComparison.OrdinalIgnoreCase)
-                                    ? numbers[0] / 1000m
-                                    : numbers[0];
-                            }
+                            product.Weight = value.Contains("гр", StringComparison.OrdinalIgnoreCase)
+                                ? numbers[0] / 1000m
+                                : numbers[0];
                         }
                     }
                 }
             }
         }
+
+        // Remove presentation-only attributes from the final description markup.
+        product.DescriptionMarkup = SanitizeDescriptionMarkup(product.DescriptionMarkup);
 
         // PDF documents
         var pdfNodes = root.SelectNodes(
@@ -232,4 +216,23 @@ public class MyHeatParser : ParserBase
             }
         }
     }
+    private static string SanitizeDescriptionMarkup(string markup)
+    {
+        if (string.IsNullOrWhiteSpace(markup))
+            return markup;
+
+        var document = new HtmlDocument();
+        document.LoadHtml(markup);
+
+        foreach (var node in document.DocumentNode.Descendants().ToList())
+        {
+            node.Attributes.Remove("class");
+            node.Attributes.Remove("style");
+            node.Attributes.Remove("width");
+            node.Attributes.Remove("height");
+        }
+
+        return document.DocumentNode.InnerHtml.Trim();
+    }
+
 }
