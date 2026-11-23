@@ -209,11 +209,29 @@ public class Formatter
         {
             foreach (var imageNode in descriptionImageNodes)
             {
+                // Remove responsive and lazy-loading sources so the browser can only use our local src.
+                foreach (var attributeName in new[]
+                {
+                    "srcset",
+                    "sizes",
+                    "data-src",
+                    "data-srcset",
+                    "data-lazy-src",
+                    "data-lazy-srcset",
+                    "data-original",
+                    "data-original-src"
+                })
+                {
+                    imageNode.Attributes.Remove(attributeName);
+                }
+
                 var imageUrl = imageNode.GetAttributeValue("src", string.Empty);
                 if (string.IsNullOrWhiteSpace(imageUrl))
                     continue;
 
-                if (Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
+                if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var parsedImageUri) &&
+                    (parsedImageUri.Scheme == Uri.UriSchemeHttp ||
+                     parsedImageUri.Scheme == Uri.UriSchemeHttps))
                 {
                     var fileName = imageUrl.CreateMD5() + ".jpg";
                     imageNode.SetAttributeValue(
