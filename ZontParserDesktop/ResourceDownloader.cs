@@ -55,8 +55,8 @@ public class ResourceDownloader
                     Directory.CreateDirectory(dir);
                 }
 
-                var data = await httpClient.GetByteArrayAsync(pdf.Uri);
-                await File.WriteAllBytesAsync(localPath, image);
+                var data = await httpClient.GetByteArrayAsync(image);
+                await File.WriteAllBytesAsync(localPath, data);
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
         }
