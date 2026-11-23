@@ -224,10 +224,9 @@ public class Formatter
 
             foreach (var pdf in p.Instructions)
             {
-                string pdfName = pdf.Name.Substring(0, pdf.Name.IndexOf("(pdf)")).Trim();
                 string pdfMd5Name = pdf.Uri.CreateMD5() + ".pdf";
                 string path = $"https://disk.yandex.ru/d/V1KNVJO3SY3ROw/{p.ManufacturerFtpPath}/{pdfMd5Name}";
-                sb.AppendLine($"({product_id}, '{pdfName}', '{path}'),");
+                sb.AppendLine($"({product_id}, '{pdf.Name}', '{path}'),");
             }
         }
 

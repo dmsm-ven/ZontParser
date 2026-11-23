@@ -55,7 +55,7 @@
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox x:Name="panelResources" Header="Ресурсы">
+            <GroupBox x:Name="panelResources" Header="Ресурсы" IsEnabled="False">
                 <StackPanel>
                     <Button
                         x:Name="btnDownloadResources"
@@ -64,7 +64,7 @@
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox x:Name="panelExport" Header="Экспорт">
+            <GroupBox x:Name="panelExport" Header="Экспорт" IsEnabled="False">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock
