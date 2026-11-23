@@ -101,9 +101,9 @@ public class Manager
         {
             return new MyHeatParser();
         }
-        if (CurrentBrandKey == TeploluxNeptuneParser.KeyName)
+        if (CurrentBrandKey == TeploluxParser.KeyName)
         {
-            return new TeploluxNeptuneParser();
+            return new TeploluxParser();
         }
         if (CurrentBrandKey == ZontBrandParser.KeyName)
         {

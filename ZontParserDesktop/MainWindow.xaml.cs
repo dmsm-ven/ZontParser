@@ -110,7 +110,7 @@ public partial class MainWindow : Window
         }
         if (chbxTeploluxNeptun.IsChecked == true)
         {
-            return TeploluxNeptuneParser.KeyName;
+            return TeploluxParser.KeyName;
         }
         if (chbxZont.IsChecked == true)
         {
