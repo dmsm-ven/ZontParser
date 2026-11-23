@@ -1,11 +1,10 @@
 ﻿using HtmlAgilityPack;
-using ZontParserDesktop;
-using ZontParserDesktop.Helpers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
+using ZontParserDesktop.Helpers;
 
 namespace ZontParserDesktop;
 
@@ -27,9 +26,13 @@ public class Formatter
         foreach (var product in products)
         {
             string mainImage = GetMainImage(product);
+            string productType = product.Name
+                .Replace($" {product.Manufacturer} ", " ")
+                .Replace($" {product.Sku} ", " ");
+            productType = Regex.Replace(productType, " {2,}", " ").Trim();
 
-            string caption = $"{product.Model} {product.Manufacturer} {product.ProductType}";
-            string keyword = Regex.Replace(Transliteration.Front(caption, true), "-{2,}", "-").Trim('-') + "-art-" + product.Sku;
+            string caption = $"{product.Sku} {product.Manufacturer} {productType}";
+            string keyword = Regex.Replace(Transliteration.Front(caption, true), "-{2,}", "-").Trim('-');
             string meta_title = $"{caption} купить в Санкт-Петербурге";
             string meta_desc = $"{meta_title} с доставкой по России";
 
@@ -49,7 +52,7 @@ public class Formatter
                 .AppendTab(string.Empty)   //mpn
                 .AppendTab(string.Empty)   //location
                 .AppendTab("0")   //quantity
-                .AppendTab(product.Model)   //model
+                .AppendTab(product.Model ?? product.Sku)   //model
                 .AppendTab(product.Manufacturer)   //manufacturer
                 .AppendTab(mainImage)   //image_name
                 .AppendTab("yes")   //shipping

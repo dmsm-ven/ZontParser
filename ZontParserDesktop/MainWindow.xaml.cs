@@ -124,7 +124,11 @@ public partial class MainWindow : Window
         IsEnabled = false;
         await manager.Load();
         IsEnabled = true;
-        btnParseBrand.IsEnabled = !string.IsNullOrWhiteSpace(manager.CurrentBrandKey);
+
+        bool isEnabled = !string.IsNullOrWhiteSpace(manager.CurrentBrandKey); ;
+        btnParseBrand.IsEnabled = isEnabled;
+        panelExport.IsEnabled = isEnabled;
+        panelResources.IsEnabled = isEnabled;
     }
 
 }

@@ -9,7 +9,6 @@ public class Product
     public string Sku { get; set; }
     public string Model { get; set; }
     public string Name { get; set; }
-    public string ProductType { get; set; }
     public List<string> Images { get; set; } = new();
     public List<PdfInstruction> Instructions { get; set; } = new();
     public string Manufacturer { get; set; }
