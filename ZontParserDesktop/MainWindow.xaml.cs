@@ -35,15 +35,7 @@ public partial class MainWindow : Window
         IsEnabled = false;
         try
         {
-            manager.CurrentBrandKey = GetSelectedBrandKey();
-            if (!string.IsNullOrWhiteSpace(manager.CurrentBrandKey))
-            {
-                await manager.ParseBrand(new Progress<double>(v => pbIndicator.Value = v));
-            }
-            else
-            {
-                MessageBox.Show("Бренд не выбран", "Инфо");
-            }
+            await manager.ParseBrand(new Progress<double>(v => pbIndicator.Value = v));
         }
         catch (Exception ex)
         {
@@ -126,9 +118,13 @@ public partial class MainWindow : Window
         }
         throw new NotImplementedException();
     }
-
-    private async void Window_Loaded(object sender, RoutedEventArgs e)
+    private async void chbxBrand_Click(object sender, RoutedEventArgs e)
     {
+        manager.CurrentBrandKey = GetSelectedBrandKey(); ;
+        IsEnabled = false;
         await manager.Load();
+        IsEnabled = true;
+        btnParseBrand.IsEnabled = !string.IsNullOrWhiteSpace(manager.CurrentBrandKey);
     }
+
 }

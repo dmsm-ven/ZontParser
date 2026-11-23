@@ -38,7 +38,9 @@ public class MyHeatParser : ParserBase
             {
                 var product = new Product
                 {
-                    Uri = ResolveUrl(HOST, productNode.GetAttributeValue("href", null))
+                    Uri = ResolveUrl(HOST, productNode.GetAttributeValue("href", null)),
+                    Manufacturer = DefaultBrand,
+                    Sku = sku
                 };
 
                 await ParseProductDetails(product);
@@ -65,8 +67,10 @@ public class MyHeatParser : ParserBase
         if (skuNode != null)
         {
             var match = Regex.Match(skuNode.InnerText, @"\d+");
-            if (match.Success)
-                product.Sku = match.Value;
+            if ((match.Success && product.Sku != match.Value) || !match.Success)
+            {
+                throw new FormatException("Ошибка формата sku товара");
+            }
         }
 
         // Product images
