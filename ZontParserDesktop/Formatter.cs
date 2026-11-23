@@ -1,4 +1,5 @@
 ﻿using HtmlAgilityPack;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -194,15 +195,34 @@ public class Formatter
             result = doc.DocumentNode.InnerHtml.TrimHtml();
         }
 
-        if (result.Contains("<a"))
+        // Remove every link destination so exported descriptions cannot link to supplier pages.
+        foreach (var node in doc.DocumentNode.SelectNodes("//*[@href]") ?? Enumerable.Empty<HtmlNode>())
+            node.Attributes.Remove("href");
+
+        // Rewrite embedded supplier images to their local OpenCart image paths.
+        var descriptionImageNodes = doc.DocumentNode.SelectNodes("//img");
+        if (descriptionImageNodes != null)
         {
-            result = Regex.Replace(result, "<a(.*?)>(.*?)</a>", "<strong>$2</strong>");
+            foreach (var imageNode in descriptionImageNodes)
+            {
+                var imageUrl = imageNode.GetAttributeValue("src", string.Empty);
+                if (string.IsNullOrWhiteSpace(imageUrl))
+                    continue;
+
+                if (Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
+                {
+                    var fileName = imageUrl.CreateMD5() + ".jpg";
+                    imageNode.SetAttributeValue(
+                        "src",
+                        $"/image/catalog/{product.ManufacturerFtpPath}/description_images/{fileName}");
+                }
+            }
         }
 
-        if (result.Contains("<img"))
-        {
-            result = Regex.Replace(result, "src=\"(.*?)\"", "src=\"\"");
-        }
+        result = doc.DocumentNode.InnerHtml.TrimHtml();
+
+        if (result.Contains("<a"))
+            result = Regex.Replace(result, "<a(.*?)>(.*?)</a>", "<strong>$2</strong>");
 
         if (result.StartsWith("<p><p>"))
         {
