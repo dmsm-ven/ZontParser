@@ -104,8 +104,10 @@ public class MyHeatParser : ParserBase
             "//h2[normalize-space()='О товаре']/ancestor::section[1]//p[1]");
 
         if (descriptionNode != null)
+        {
             product.DescriptionMarkup = descriptionNode.InnerHtml.Trim();
-
+            PrepareDescriptionImages(product);
+        }
         // Functional features
         // Resolve the tab by its ID directly. It is not guaranteed to remain inside
         // the same wrapper as the "Характеристики" heading.
