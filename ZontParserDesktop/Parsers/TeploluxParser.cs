@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ZontParserDesktop.Helpers;
 
@@ -25,20 +26,23 @@ public class TeploluxParser : ParserBase
         foreach (var sku in skusToParse)
         {
             string uri = await SerachProductUriBySku(sku);
-            if (!string.IsNullOrWhiteSpace(uri))
+            var product = new Product
             {
-                var product = new Product
-                {
-                    Uri = uri,
-                    Manufacturer = DefaultBrand,
-                    Sku = sku
-                };
-
+                Uri = uri,
+                Manufacturer = DefaultBrand,
+                Sku = sku
+            };
+            if (!string.IsNullOrWhiteSpace(product.Uri))
+            {
                 await ParseProductDetails(product);
-                list.Add(product);
             }
+            list.Add(product);
 
             indicator?.Report((double)++current / total);
+            if (sku != skusToParse.Last())
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3));
+            }
         }
 
         return list;
@@ -56,6 +60,7 @@ public class TeploluxParser : ParserBase
 
         product.Name = root.SelectSingleNode("//h1").InnerText.Trim();
         product.DescriptionMarkup = root.SelectSingleNode("//div[@class='t_desc']")?.InnerHtml.TrimHtml();
+        PrepareDescriptionImages(product);
 
         if (root.SelectSingleNode("//div[@class='pd_rd_thumbs']//img") != null)
         {
@@ -63,6 +68,11 @@ public class TeploluxParser : ParserBase
                 .Select(image => HOST + image.GetAttributeValue("src", null))
                 .ToArray();
             product.Images.AddRange(images);
+        }
+        else if (root.SelectSingleNode("//div[@class='product_images_slider_wrap']//img") != null)
+        {
+            var singleImage = HOST + root.SelectSingleNode("//div[@class='product_images_slider_wrap']//img").GetAttributeValue("src", null);
+            product.Images.Add(singleImage);
         }
         else
         {
@@ -93,6 +103,49 @@ public class TeploluxParser : ParserBase
                 .ToArray();
             product.Instructions.AddRange(pdfs);
         }
+
+        var pageSkuNode = doc.DocumentNode.SelectSingleNode("//div[@class='top_chars']/p[contains(text(), 'Артикул: ')]");
+        if (pageSkuNode != null)
+        {
+            var pageSKu = pageSkuNode
+                .InnerText
+                .Replace("Артикул: ", "")
+                .Trim();
+
+            if (pageSKu != product.Sku)
+            {
+                Debug.WriteLine($"Несовпадение SKU товара: {pageSKu ?? "<EMPTY>"} != {product.Sku}");
+            }
+        }
+
+        var productSkuCh = product.Characteristics.FirstOrDefault(ch => ch.Name == "Артикул 1С");
+        if (productSkuCh != null)
+        {
+            product.Characteristics.Remove(productSkuCh);
+        }
+
+        var productDimensionsCh = product.Characteristics.FirstOrDefault(ch => ch.Name == "Размеры");
+        if (productDimensionsCh != null)
+        {
+            //example:  38 х 88 х 66 мм
+            var dimRegexp = Regex.Match(productDimensionsCh.Value, @"(\d+) ?х ?(\d+) ?х ?(\d+) ?мм");
+            if (dimRegexp.Success)
+            {
+                product.Dimensions = [
+                    int.Parse(dimRegexp.Groups[1].Value),
+                    int.Parse(dimRegexp.Groups[2].Value),
+                    int.Parse(dimRegexp.Groups[2].Value)];
+            }
+        }
+        var productWeightCh = product.Characteristics.FirstOrDefault(ch => ch.Name == "Вес");
+        if (productWeightCh != null)
+        {
+            var weightRegexp = Regex.Match(productWeightCh.Value, @"(\d+) ?г");
+            if (weightRegexp.Success)
+            {
+                product.Weight = int.Parse(weightRegexp.Groups[1].Value);
+            }
+        }
     }
 
     private async Task<string> SerachProductUriBySku(string sku)
@@ -116,7 +169,7 @@ public class TeploluxParser : ParserBase
 
             if (results.Length == 1)
             {
-                return results[0];
+                return HOST + results[0];
             }
             Debug.WriteLine($"Найден более 1го результата для SKU: {sku}");
         }
@@ -124,6 +177,6 @@ public class TeploluxParser : ParserBase
         {
             Debug.WriteLine($"Товар с SKU: {sku} не найден");
         }
-        throw new ArgumentOutOfRangeException();
+        return "";
     }
 }

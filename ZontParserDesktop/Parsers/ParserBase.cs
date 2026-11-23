@@ -94,4 +94,61 @@ public abstract class ParserBase
 
         return document.DocumentNode.InnerHtml.Trim();
     }
+
+    protected static void PrepareDescriptionImages(Product product)
+    {
+        if (string.IsNullOrWhiteSpace(product.DescriptionMarkup))
+            return;
+
+        var description = new HtmlDocument();
+        description.LoadHtml(product.DescriptionMarkup);
+
+        var imageNodes = description.DocumentNode.SelectNodes("//img");
+        if (imageNodes != null)
+        {
+            foreach (var imageNode in imageNodes)
+            {
+                var imageSource = imageNode.GetAttributeValue("src", null);
+
+                if (string.IsNullOrWhiteSpace(imageSource))
+                    imageSource = imageNode.GetAttributeValue("data-src", null);
+
+                var imageUrl = ResolveUrl(product.Uri, imageSource);
+                if (string.IsNullOrWhiteSpace(imageUrl))
+                    continue;
+
+                if (!product.DescriptionImages.Contains(imageUrl, StringComparer.OrdinalIgnoreCase))
+                    product.DescriptionImages.Add(imageUrl);
+
+                // Keep the original URL in markup; Formatter replaces it with the local website path.
+                imageNode.SetAttributeValue("src", imageUrl);
+
+                // Prevent the browser from selecting supplier images through responsive/lazy-load attributes.
+                foreach (var attributeName in new[]
+                {
+                    "srcset",
+                    "sizes",
+                    "data-src",
+                    "data-srcset",
+                    "data-lazy-src",
+                    "data-lazy-srcset",
+                    "data-original",
+                    "data-original-src"
+                })
+                {
+                    imageNode.Attributes.Remove(attributeName);
+                }
+            }
+        }
+
+        // Product descriptions must not contain links to the supplier website.
+        var linkedNodes = description.DocumentNode.SelectNodes("//*[@href]");
+        if (linkedNodes != null)
+        {
+            foreach (var node in linkedNodes)
+                node.Attributes.Remove("href");
+        }
+
+        product.DescriptionMarkup = description.DocumentNode.InnerHtml.Trim();
+    }
 }

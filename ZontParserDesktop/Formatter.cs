@@ -1,6 +1,7 @@
 ﻿using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -11,6 +12,7 @@ namespace ZontParserDesktop;
 
 public class Formatter
 {
+    private readonly Dictionary<string, string> customNameMap = null;
     private readonly IReadOnlyList<Product> products;
     private readonly int startId;
 
@@ -18,6 +20,10 @@ public class Formatter
     {
         this.products = products.ToList();
         this.startId = startId;
+
+        customNameMap = File.ReadAllLines("custom_name_map.txt")
+            .Select(line => line.Split('\t'))
+            .ToDictionary(i => i[0], i => i[1]);
     }
     internal string GetGeneralExport()
     {
@@ -27,6 +33,11 @@ public class Formatter
         foreach (var product in products)
         {
             string mainImage = GetMainImage(product);
+            if (string.IsNullOrWhiteSpace(product.Name))
+            {
+                product.Name = customNameMap[product.Sku];
+            }
+
             string productType = product.Name
                 .Replace($" {product.Manufacturer} ", " ")
                 .Replace($" {product.Sku} ", " ");

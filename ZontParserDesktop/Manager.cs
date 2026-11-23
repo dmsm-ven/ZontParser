@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using ZontParserDesktop.Parsers;
@@ -81,6 +82,10 @@ public class Manager
         {
             await using FileStream stream = File.OpenRead(CurrentStorageFileName);
             products = await JsonSerializer.DeserializeAsync<List<Product>>(stream);
+            if (products.Any(p => string.IsNullOrWhiteSpace(p.Uri)))
+            {
+                products = products.OrderBy(p => !String.IsNullOrWhiteSpace(p.Uri) ? 0 : 1).ToList();
+            }
         }
     }
 
