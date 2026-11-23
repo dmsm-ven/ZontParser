@@ -1,6 +1,5 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
-using HtmlAgilityPack;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -216,23 +215,4 @@ public class MyHeatParser : ParserBase
             }
         }
     }
-    private static string SanitizeDescriptionMarkup(string markup)
-    {
-        if (string.IsNullOrWhiteSpace(markup))
-            return markup;
-
-        var document = new HtmlDocument();
-        document.LoadHtml(markup);
-
-        foreach (var node in document.DocumentNode.Descendants().ToList())
-        {
-            node.Attributes.Remove("class");
-            node.Attributes.Remove("style");
-            node.Attributes.Remove("width");
-            node.Attributes.Remove("height");
-        }
-
-        return document.DocumentNode.InnerHtml.Trim();
-    }
-
 }
