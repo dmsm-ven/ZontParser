@@ -1,7 +1,7 @@
-﻿<Application x:Class="KvtSu.App"
+﻿<Application x:Class="ZontParserDesktop.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:KvtSu"
+             xmlns:local="clr-namespace:ZontParserDesktop"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
          

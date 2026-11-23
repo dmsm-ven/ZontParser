@@ -1,6 +1,6 @@
 ﻿using HtmlAgilityPack;
-using KvtSu;
-using KvtSu.Helpers;
+using ZontParserDesktop;
+using ZontParserDesktop.Helpers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

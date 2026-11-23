@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace KvtSu.Helpers;
+namespace ZontParserDesktop.Helpers;
 public static class StringEx
 {
     public static string TrimHtml(this string s)

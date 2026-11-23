@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Windows;
+using ZontParserDesktop.Parsers;
 
-namespace KvtSu;
+namespace ZontParserDesktop;
 /// <summary>
 /// Interaction logic for MainWindow.xaml
 /// </summary>
 public partial class MainWindow : Window
 {
-    private readonly Manager manager = new("products.json");
+    private readonly Manager manager = new();
 
     private int PID
     {
@@ -34,7 +35,15 @@ public partial class MainWindow : Window
         IsEnabled = false;
         try
         {
-            await manager.ParseBrand(new Progress<double>(v => pbIndicator.Value = v), false);
+            manager.CurrentBrandKey = GetSelectedBrandKey();
+            if (!string.IsNullOrWhiteSpace(manager.CurrentBrandKey))
+            {
+                await manager.ParseBrand(new Progress<double>(v => pbIndicator.Value = v));
+            }
+            else
+            {
+                MessageBox.Show("Бренд не выбран", "Инфо");
+            }
         }
         catch (Exception ex)
         {
@@ -48,7 +57,6 @@ public partial class MainWindow : Window
 
     private void btnGeneralExport_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("PID CHECK WARNING");
         string data = manager.GetGeneralExport(PID);
         Clipboard.SetText(data);
     }
@@ -96,20 +104,31 @@ public partial class MainWindow : Window
         }
     }
 
-    private void btnClipboardToCategories_Click(object sender, RoutedEventArgs e)
-    {
-        string data = manager.GetCategories(Clipboard.GetText());
-        Clipboard.SetText(data);
-    }
-
     private void btnGetDimensionsSql_Click(object sender, RoutedEventArgs e)
     {
         string data = manager.GetDimensionsSql(PID);
         Clipboard.SetText(data);
     }
 
-    private void Window_Loaded(object sender, RoutedEventArgs e)
+    private string GetSelectedBrandKey()
     {
+        if (chbxMyHeat.IsChecked == true)
+        {
+            return MyHeatParser.KeyName;
+        }
+        if (chbxTeploluxNeptun.IsChecked == true)
+        {
+            return TeploluxNeptuneParser.KeyName;
+        }
+        if (chbxZont.IsChecked == true)
+        {
+            return ZontBrandParser.KeyName;
+        }
+        throw new NotImplementedException();
+    }
 
+    private async void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        await manager.Load();
     }
 }
