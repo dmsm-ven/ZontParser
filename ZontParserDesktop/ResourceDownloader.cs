@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Windows.Media.Imaging;
 using ZontParserDesktop.Helpers;
 
 namespace ZontParserDesktop;
@@ -70,6 +71,38 @@ public class ResourceDownloader
                     throw;
                 }
             }
+        }
+
+        // Description images are always stored as JPEG, regardless of the supplier format.
+        foreach (var imageUrl in product.DescriptionImages.Distinct())
+        {
+            string localPath = Path.Combine(
+                folder,
+                product.ManufacturerFtpPath,
+                "description_images",
+                imageUrl.CreateMD5() + ".jpg");
+
+            if (File.Exists(localPath))
+                continue;
+
+            var dir = Path.GetDirectoryName(localPath);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
+            var imageBytes = await httpClient.GetByteArrayAsync(imageUrl);
+            using var inputStream = new MemoryStream(imageBytes);
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.StreamSource = inputStream;
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            var encoder = new JpegBitmapEncoder { QualityLevel = 90 };
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+
+            using var outputStream = new FileStream(localPath, FileMode.Create, FileAccess.Write);
+            encoder.Save(outputStream);
         }
 
         var instructions = product.Instructions;
