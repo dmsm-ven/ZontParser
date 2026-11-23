@@ -247,7 +247,22 @@ public class ZontBrandParser : ParserBase
 
                 // Keep the original URL in markup; Formatter replaces it with the local website path.
                 imageNode.SetAttributeValue("src", imageUrl);
-                imageNode.Attributes.Remove("data-src");
+
+                // Prevent the browser from selecting supplier images through responsive/lazy-load attributes.
+                foreach (var attributeName in new[]
+                {
+                    "srcset",
+                    "sizes",
+                    "data-src",
+                    "data-srcset",
+                    "data-lazy-src",
+                    "data-lazy-srcset",
+                    "data-original",
+                    "data-original-src"
+                })
+                {
+                    imageNode.Attributes.Remove(attributeName);
+                }
             }
         }
 
