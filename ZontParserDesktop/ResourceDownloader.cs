@@ -43,7 +43,7 @@ public class ResourceDownloader
     {
         var images = product.Images.Distinct().ToArray();
 
-        /*foreach (var image in images)
+        foreach (var image in images)
         {
             string localPath = Path.Combine(folder, product.ManufacturerFtpPath, "products", image.CreateMD5() + Path.GetExtension(image).ToLower());
 
@@ -59,7 +59,7 @@ public class ResourceDownloader
                 await File.WriteAllBytesAsync(localPath, image);
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
-        }*/
+        }
 
         // Description images are always stored as JPEG, regardless of the supplier format.
         foreach (var imageUrl in product.DescriptionImages.Distinct())
