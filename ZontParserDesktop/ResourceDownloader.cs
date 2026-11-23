@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using ZontParserDesktop.Helpers;
 
@@ -9,6 +10,7 @@ namespace ZontParserDesktop;
 
 public class ResourceDownloader
 {
+    private HttpClient httpClient = new();
     public async Task DownloadResource(IEnumerable<Product> products, string folder, IProgress<double> indicator)
     {
         int total = products.Count();
@@ -51,7 +53,7 @@ public class ResourceDownloader
                 {
                     using (var fs = new FileStream(localPath, FileMode.Create))
                     {
-                        var data = await Parser.Client.GetStreamAsync(image);
+                        var data = await httpClient.GetStreamAsync(image);
                         await data.CopyToAsync(fs);
                     }
 
@@ -80,7 +82,7 @@ public class ResourceDownloader
                 {
                     using (var fs = new FileStream(localPath, FileMode.Create))
                     {
-                        var data = await Parser.Client.GetStreamAsync(pdf.Uri);
+                        var data = await httpClient.GetStreamAsync(pdf.Uri);
                         await data.CopyToAsync(fs);
                     }
                 }

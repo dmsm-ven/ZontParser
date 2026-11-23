@@ -10,7 +10,7 @@ public class TeploluxNeptuneParser : ParserBase
 
     public static string DefaultBrand => "Теплолюкс";
 
-    public override Task<List<Product>> ParseProducts()
+    public override Task<List<Product>> ParseProducts(IProgress<double> indicator)
     {
         throw new NotImplementedException();
     }

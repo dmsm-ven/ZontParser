@@ -10,7 +10,7 @@ public class ZontBrandParser : ParserBase
 
     public static string DefaultBrand => "ZONT";
 
-    public override Task<List<Product>> ParseProducts()
+    public override Task<List<Product>> ParseProducts(IProgress<double> indicator)
     {
         throw new NotImplementedException();
     }
