@@ -13,6 +13,7 @@ public class Product
     public List<PdfInstruction> Instructions { get; set; } = new();
     public string Manufacturer { get; set; }
     public string? DescriptionMarkup { get; set; }
+    public List<string> DescriptionImages { get; set; } = new();
     public List<Characteristic> Characteristics { get; set; } = new();
     public decimal[] Dimensions { get; set; }
     public bool HasDimensions => Dimensions != null && Dimensions.Length == 3;
